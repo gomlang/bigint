@@ -27,6 +27,8 @@ Both types provide `zero`, `one`, `from_u64`, `parse`, `parse_radix`, `to_radix`
 
 `BigInt` also provides `from_i64`, `from_sign_magnitude(negative, BigUint)`, `abs() -> BigUint`, `is_negative`, `signum() -> i8`, `neg`, `sub`, `bitnot`, and `div_rem_euclid`. Its `gcd` and `lcm` return nonnegative `BigUint` values. `BigUint::sub` returns `Result` and reports unsigned underflow. Its additional methods are `count_ones`, `trailing_zeros() -> Option[isize]`, and detached little-endian limb import/export.
 
+`BigUint::sqrt()` returns the floor square root. `sqrt_rem()` returns `(root, remainder)` with `n = root² + remainder` and `0 <= remainder < 2*root + 1`. `sqrt_rem_with_limits` checks the input magnitude against a caller-provided bit budget before Newton iteration; the ordinary methods use standard limits.
+
 Checked `to_i8/i16/i32/i64/isize` and `to_u8/u16/u32/u64/usize` conversions return `Option`, never truncate. Machine-width conversions use the current Linux amd64 target's 64-bit `isize` and `usize`.
 
 ### Arithmetic semantics
@@ -67,7 +69,7 @@ Deserialization uses standard limits and rejects noncanonical representations: e
 
 ## Complexity and limits
 
-With `n` and `m` limbs, addition/subtraction and bitwise operations are linear, multiplication is O(nm), and normalized division is O((n-m+1)m) for `n >= m`. Powers use repeated squaring. GCD uses Euclidean division. Text parsing uses multiply-add per digit; formatting divides by the largest radix power that fits a limb and emits grouped digits. General-radix conversion is quadratic in digit length. This implementation does not include Karatsuba/FFT multiplication, Montgomery reduction, modular inverse, roots, random-prime generation, rational arithmetic, floating-point conversions, or operator overloading.
+With `n` and `m` limbs, addition/subtraction and bitwise operations are linear, multiplication is O(nm), and normalized division is O((n-m+1)m) for `n >= m`. Powers use repeated squaring. GCD uses Euclidean division. Text parsing uses multiply-add per digit; formatting divides by the largest radix power that fits a limb and emits grouped digits. General-radix conversion is quadratic in digit length. Square root uses Newton iteration over integer division. This implementation does not include Karatsuba/FFT multiplication, Montgomery reduction, modular inverse, higher integer roots, random-prime generation, rational arithmetic, floating-point conversions, or operator overloading. Rational and binary floating-point values live in `ecosystem::bigmath`.
 
 ## Verification
 

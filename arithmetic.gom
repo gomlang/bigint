@@ -251,6 +251,37 @@ impl BigUint {
         left
     }
 
+    pub fn sqrt(self: BigUint) -> Result[BigUint, Error] {
+        let (root, _) = self.sqrt_rem()?;
+        Result::Ok(root)
+    }
+
+    pub fn sqrt_rem(self: BigUint) -> Result[(BigUint, BigUint), Error] {
+        self.sqrt_rem_with_limits(Limits::standard())
+    }
+
+    pub fn sqrt_rem_with_limits(self: BigUint, limits: Limits) -> Result[(BigUint, BigUint), Error] {
+        limits.validate()?;
+        if self.bits() > limits.max_bits {
+            return Result::Err(Error::LimitExceeded("bits"))
+        }
+        if self.is_zero() {
+            return Result::Ok((BigUint::zero(), BigUint::zero()))
+        }
+        if self.is_one() {
+            return Result::Ok((BigUint::one(), BigUint::zero()))
+        }
+        let mut root = BigUint::one().shl_with_limits((self.bits() + 1) / 2, limits)?;
+        loop {
+            let estimate = root.add(self.div(root)?).shr(1)?;
+            if estimate.cmp(root) != Ordering::Less {
+                let remainder = self.sub(root.mul(root))?;
+                return Result::Ok((root, remainder))
+            }
+            root = estimate;
+        }
+    }
+
     pub fn lcm(self: BigUint, other: BigUint) -> BigUint {
         if self.is_zero() || other.is_zero() {
             BigUint::zero()
