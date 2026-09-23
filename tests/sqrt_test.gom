@@ -1,0 +1,36 @@
+package tests;
+
+use ecosystem::bigint::{BigUint, Limits};
+use std::testing;
+
+#[test]
+fn square_root_returns_floor_and_exact_remainder() -> () {
+    for value in 0..1000 {
+        let input = BigUint::from_u64(value.to_u64());
+        let (root, remainder) = testing::expect_ok(input.sqrt_rem(), "integer square root");
+        testing::assert_eq(root.mul(root).add(remainder), input);
+        testing::assert(root.mul(root).cmp(input) != Ordering::Greater);
+        let next = root.add(BigUint::one());
+        testing::assert(next.mul(next).cmp(input) == Ordering::Greater);
+        testing::assert_eq(testing::expect_ok(input.sqrt(), "square root only"), root);
+    }
+    let large = testing::expect_ok(BigUint::one().shl(4096), "large square");
+    let (root, remainder) = testing::expect_ok(large.sqrt_rem(), "large square root");
+    testing::assert_eq(root.bits(), 2049);
+    testing::assert(remainder.is_zero());
+    let near = testing::expect_ok(large.sub(BigUint::one()), "one below square");
+    let (root, remainder) = testing::expect_ok(near.sqrt_rem(), "near square root");
+    testing::assert_eq(root.mul(root).add(remainder), near);
+}
+
+#[test]
+fn square_root_respects_input_limits() -> () {
+    let limits = Limits { max_bits: 1, max_digits: 1, max_exponent: 1 };
+    let (root, remainder) = testing::expect_ok(
+        BigUint::one().sqrt_rem_with_limits(limits),
+        "one with small limit",
+    );
+    testing::assert_eq(root, BigUint::one());
+    testing::assert_eq(remainder, BigUint::zero());
+    testing::assert(BigUint::from_u64(2).sqrt_rem_with_limits(limits).is_err());
+}
