@@ -32,7 +32,7 @@ Both types provide `zero`, `one`, `from_u64`, `parse`, `parse_radix`, `to_radix`
 `BigUint::nth_root(degree)` and `nth_root_rem(degree)` support every positive
 `u64` degree. They return the floor root `r` and optionally the remainder
 `n - r^degree`, with `r^degree <= n < (r+1)^degree`. Degree zero returns
-`InvalidRootDegree`; degree one returns the input and zero remainder.
+`RootError::InvalidDegree`; degree one returns the input and zero remainder.
 Zero and one are exact for every positive degree. Degrees at least the input
 bit count return one for nonzero inputs without allocating a huge power.
 `nth_root_rem_with_limits` checks the input bit budget before iteration; digit
@@ -40,7 +40,10 @@ and exponent limits do not constrain root degree. Newton iteration uses bounded
 power comparisons, discarding a product as soon as it exceeds the input;
 multiplication scratch can use up to twice the input bit length. The ordinary
 methods use standard limits. These APIs are unsigned: signed negative inputs,
-including odd-degree signed roots, are not supported.
+including odd-degree signed roots, are not supported. Root APIs return the
+separate `RootError` enum; `RootError::Integer(Error)` preserves underlying
+limit/arithmetic failures. The existing `Error` enum is unchanged, so older
+exhaustive matches remain valid.
 
 Checked `to_i8/i16/i32/i64/isize` and `to_u8/u16/u32/u64/usize` conversions return `Option`, never truncate. Machine-width conversions use the current Linux amd64 target's 64-bit `isize` and `usize`.
 

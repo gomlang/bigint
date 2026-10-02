@@ -1,5 +1,20 @@
 package bigint;
 
+#[derive(PartialEq, Eq, Debug)]
+pub enum RootError {
+    InvalidDegree,
+    Integer(Error),
+}
+
+impl ToString for RootError {
+    fn to_string(self: RootError) -> string {
+        match self {
+            RootError::InvalidDegree => "integer root degree must be positive",
+            RootError::Integer(error) => error.to_string(),
+        }
+    }
+}
+
 fn power_bounded(value: BigUint, exponent: u64, bound: BigUint) -> Option[BigUint] {
     let mut result = BigUint::one();
     let mut factor = value;
@@ -23,54 +38,58 @@ fn power_bounded(value: BigUint, exponent: u64, bound: BigUint) -> Option[BigUin
 }
 
 impl BigUint {
-    pub fn nth_root(self: BigUint, degree: u64) -> Result[BigUint, Error] {
+    pub fn nth_root(self: BigUint, degree: u64) -> Result[BigUint, RootError] {
         let (root, _) = self.nth_root_rem(degree)?;
         Result::Ok(root)
     }
 
-    pub fn nth_root_rem(self: BigUint, degree: u64) -> Result[(BigUint, BigUint), Error] {
+    pub fn nth_root_rem(self: BigUint, degree: u64) -> Result[(BigUint, BigUint), RootError] {
         self.nth_root_rem_with_limits(degree, Limits::standard())
     }
 
     pub fn nth_root_rem_with_limits(self: BigUint, degree: u64, limits: Limits) -> Result[
         (BigUint, BigUint),
-        Error,
+        RootError,
     ] {
-        limits.validate()?;
+        limits.validate().map_err(|error| RootError::Integer(error))?;
         if degree == 0 {
-            return Result::Err(Error::InvalidRootDegree)
+            return Result::Err(RootError::InvalidDegree)
         }
-        let _ = check_bits(self, limits)?;
-        if degree == 1 || self.is_zero() || self.is_one() {
-            return Result::Ok((self, BigUint::zero()))
+        integer_root(self, degree, limits).map_err(|error| RootError::Integer(error))
+    }
+}
+
+fn integer_root(value: BigUint, degree: u64, limits: Limits) -> Result[(BigUint, BigUint), Error] {
+    let _ = check_bits(value, limits)?;
+    if degree == 1 || value.is_zero() || value.is_one() {
+        return Result::Ok((value, BigUint::zero()))
+    }
+    if degree >= value.bits().to_u64() {
+        return Result::Ok((BigUint::one(), subtract(value, BigUint::one())))
+    }
+    if degree == 2 {
+        return value.sqrt_rem_with_limits(limits)
+    }
+    let bits = value.bits().to_u64();
+    let root_bits = (bits / degree
+        + if bits % degree == 0 {
+            0
+        } else {
+            1
+        }).to_isize();
+    let mut root = BigUint::one().shl_with_limits(root_bits, limits)?;
+    let divisor = BigUint::from_u64(degree);
+    let factor = BigUint::from_u64(degree - 1);
+    loop {
+        let quotient = match power_bounded(root, degree - 1, value) {
+            Some(power) => value.div(power)?,
+            None => BigUint::zero(),
+        };
+        let estimate = root.mul(factor).add(quotient).div(divisor)?;
+        if estimate.cmp(root) != Ordering::Less {
+            let power = power_bounded(root, degree, value).ok_or(Error::Underflow)?;
+            return Result::Ok((root, subtract(value, power)))
         }
-        if degree >= self.bits().to_u64() {
-            return Result::Ok((BigUint::one(), subtract(self, BigUint::one())))
-        }
-        if degree == 2 {
-            return self.sqrt_rem_with_limits(limits)
-        }
-        let bits = self.bits().to_u64();
-        let root_bits = (bits / degree
-            + if bits % degree == 0 {
-                0
-            } else {
-                1
-            }).to_isize();
-        let mut root = BigUint::one().shl_with_limits(root_bits, limits)?;
-        let divisor = BigUint::from_u64(degree);
-        let factor = BigUint::from_u64(degree - 1);
-        loop {
-            let quotient = match power_bounded(root, degree - 1, self) {
-                Some(power) => self.div(power)?,
-                None => BigUint::zero(),
-            };
-            let estimate = root.mul(factor).add(quotient).div(divisor)?;
-            if estimate.cmp(root) != Ordering::Less {
-                let power = power_bounded(root, degree, self).ok_or(Error::Underflow)?;
-                return Result::Ok((root, subtract(self, power)))
-            }
-            root = estimate;
-        }
+        root = estimate;
     }
 }
