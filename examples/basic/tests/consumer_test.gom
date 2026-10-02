@@ -1,6 +1,6 @@
 package tests;
 
-use consumer::bigint;
+use ecosystem::bigint::examples::basic as bigint;
 use ecosystem::bigint::{BigInt, BigUint};
 use std::testing;
 

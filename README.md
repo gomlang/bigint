@@ -1,6 +1,6 @@
 # bigint
 
-Pure GoML arbitrary-precision signed and unsigned integers, with no Go adapter or native dependency. The module is `ecosystem::bigint`; `consumer` resolves its independent `0.1.0` registry dependency and exercises exact coefficients, serialization, and map keys.
+Pure GoML arbitrary-precision signed and unsigned integers, with no Go adapter or native dependency. The module is `ecosystem::bigint`; `examples/basic` exercises exact coefficients, serialization, and map keys.
 
 The API takes inspiration from [num-bigint](https://docs.rs/num-bigint/latest/num_bigint/struct.BigInt.html). Division explicitly distinguishes truncating quotient/remainder from Euclidean division, as in [Go math/big](https://pkg.go.dev/math/big#Int.QuoRem). These are API references; the arithmetic implementation is GoML code.
 
@@ -79,4 +79,16 @@ From the repository root:
 (cd ../verification && just ecosystem-test bigint)
 ```
 
-Black-box tests cover signed division identities, quotient-correction boundaries, carry chains, fixed-width conversion extremes, all radices, canonical Serde, resource limits, detached storage, and shared concurrent arithmetic. The versioned consumer has its own tests. The consumer’s native GoML tests check 1,938 frozen independent reference vectors covering multi-limb arithmetic, signed bitwise operations and shifts, both division conventions, radices, signed bytes, powers, GCD/LCM, and modular powers. [Vector provenance](consumer/tests/data/README.md) records the independent arbitrary-precision reference and seed. The native ecosystem verifier also runs the concurrent immutable arithmetic tests under Go’s race detector. Python is not required.
+Black-box tests cover signed division identities, quotient-correction boundaries, carry chains, fixed-width conversion extremes, all radices, canonical Serde, resource limits, detached storage, and shared concurrent arithmetic. The example has its own tests. The example’s native GoML tests check 1,938 frozen independent reference vectors covering multi-limb arithmetic, signed bitwise operations and shifts, both division conventions, radices, signed bytes, powers, GCD/LCM, and modular powers. [Vector provenance](examples/basic/tests/data/README.md) records the independent arbitrary-precision reference and seed. The native ecosystem verifier also runs the concurrent immutable arithmetic tests under Go’s race detector. Python is not required.
+
+## Development and examples
+
+Requires GoML 0.1.55 or newer. The `examples/basic/` example shares the root manifest; test-only helpers are declared in `[dev-dependencies]`. From the library root, run:
+
+```sh
+goml run --example basic
+goml test
+goml verify --timeout 300s
+```
+
+`goml test` builds the example and runs its tests. `goml verify` repeats the example checks as an independent module against an isolated registry snapshot. `(cd ../verification && just ecosystem-test bigint)` also retains the library-specific smoke and compatibility checks.

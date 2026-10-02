@@ -1,7 +1,7 @@
 package tests;
 
 use ecosystem::verification::reference;
-use consumer::bigint as application;
+use ecosystem::bigint::examples::basic as application;
 use std::testing;
 use std::fs;
 use std::json;
