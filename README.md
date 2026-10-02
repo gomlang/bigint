@@ -40,6 +40,15 @@ Checked `to_i8/i16/i32/i64/isize` and `to_u8/u16/u32/u64/usize` conversions retu
 - Signed bitwise operations act on infinite two's-complement representations. `bitnot(x) = -x - 1`; right shift rounds negative values toward negative infinity. `bits()` measures the magnitude. Negative bit indexes return false. `trailing_zeros(0)` returns `None`.
 - Shift counts are signed machine integers; negative counts return `Error::NegativeShift`. Large right shifts allocate no huge intermediate value and return zero or negative one as appropriate.
 
+`mod_inverse(modulus) -> Result[Option[BigUint], Error]` is available on both
+integer types. Extended Euclidean division returns the unique residue in
+`0..modulus` when the value and modulus are coprime, and `None` otherwise.
+Negative signed inputs are supported. Modulus zero is an error; modulus one
+returns `Some(0)`, including for zero. `mod_inverse_with_limits` validates the
+base and modulus bit budgets before starting; ordinary inversion uses standard
+limits. Coefficient scratch arithmetic is bounded by the input sizes, but this
+variable-time algorithm is not suitable for secret cryptographic values.
+
 ### Text and byte encodings
 
 Text parsing accepts optional ASCII `+`, signed `-`, and ASCII digits in radix 2 through 36. Letters are case-insensitive. Leading zeros are accepted. Whitespace, prefixes such as `0x`, underscores, Unicode digits, and a bare sign are rejected. `BigUint` rejects even `-0`. Output is canonical lowercase without a prefix or leading zeros.
@@ -69,7 +78,7 @@ Deserialization uses standard limits and rejects noncanonical representations: e
 
 ## Complexity and limits
 
-With `n` and `m` limbs, addition/subtraction and bitwise operations are linear, multiplication is O(nm), and normalized division is O((n-m+1)m) for `n >= m`. Powers use repeated squaring. GCD uses Euclidean division. Text parsing uses multiply-add per digit; formatting divides by the largest radix power that fits a limb and emits grouped digits. General-radix conversion is quadratic in digit length. Square root uses Newton iteration over integer division. This implementation does not include Karatsuba/FFT multiplication, Montgomery reduction, modular inverse, higher integer roots, random-prime generation, rational arithmetic, floating-point conversions, or operator overloading. Rational and binary floating-point values live in `ecosystem::bigmath`.
+With `n` and `m` limbs, addition/subtraction and bitwise operations are linear, multiplication is O(nm), and normalized division is O((n-m+1)m) for `n >= m`. Powers use repeated squaring. GCD uses Euclidean division. Text parsing uses multiply-add per digit; formatting divides by the largest radix power that fits a limb and emits grouped digits. General-radix conversion is quadratic in digit length. Square root uses Newton iteration over integer division. This implementation does not include Karatsuba/FFT multiplication, Montgomery reduction, higher integer roots, random-prime generation, rational arithmetic, floating-point conversions, or operator overloading. Rational and binary floating-point values live in `ecosystem::bigmath`.
 
 ## Verification
 

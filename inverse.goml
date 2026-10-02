@@ -1,0 +1,64 @@
+package bigint;
+
+impl BigUint {
+    pub fn mod_inverse(self: BigUint, modulus: BigUint) -> Result[Option[BigUint], Error] {
+        self.mod_inverse_with_limits(modulus, Limits::standard())
+    }
+
+    pub fn mod_inverse_with_limits(self: BigUint, modulus: BigUint, limits: Limits) -> Result[
+        Option[BigUint],
+        Error,
+    ] {
+        limits.validate()?;
+        let _ = check_bits(self, limits)?;
+        let _ = check_bits(modulus, limits)?;
+        if modulus.is_zero() {
+            return Result::Err(Error::DivisionByZero)
+        }
+        let mut previous = modulus;
+        let mut current = self.rem(modulus)?;
+        let mut previous_coefficient = BigInt::zero();
+        let mut coefficient = BigInt::one();
+        while !current.is_zero() {
+            let (quotient, remainder) = previous.div_rem(current)?;
+            let next = previous_coefficient.sub(
+                BigInt::from_sign_magnitude(false, quotient).mul(coefficient),
+            );
+            previous = current;
+            current = remainder;
+            previous_coefficient = coefficient;
+            coefficient = next;
+        }
+        if !previous.is_one() {
+            return Result::Ok(Option::None)
+        }
+        let (_, residue) = previous_coefficient.div_rem_euclid(
+            BigInt::from_sign_magnitude(false, modulus),
+        )?;
+        Result::Ok(Option::Some(residue.abs()))
+    }
+}
+
+impl BigInt {
+    pub fn mod_inverse(self: BigInt, modulus: BigUint) -> Result[Option[BigUint], Error] {
+        self.mod_inverse_with_limits(modulus, Limits::standard())
+    }
+
+    pub fn mod_inverse_with_limits(self: BigInt, modulus: BigUint, limits: Limits) -> Result[
+        Option[BigUint],
+        Error,
+    ] {
+        match self.magnitude.mod_inverse_with_limits(modulus, limits)? {
+            Some(inverse) => Result::Ok(
+                Option::Some(
+                    if self.negative && !inverse.is_zero() {
+                        subtract(modulus, inverse)
+                    } else {
+                        inverse
+                    },
+                ),
+            ),
+            None => Result::Ok(Option::None),
+        }
+    }
+}
