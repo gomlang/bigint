@@ -1,0 +1,76 @@
+package bigint;
+
+fn power_bounded(value: BigUint, exponent: u64, bound: BigUint) -> Option[BigUint] {
+    let mut result = BigUint::one();
+    let mut factor = value;
+    let mut remaining = exponent;
+    while remaining != 0 {
+        if (remaining & 1) != 0 {
+            result = result.mul(factor);
+            if result.cmp(bound) == Ordering::Greater {
+                return Option::None
+            }
+        }
+        remaining >>= 1;
+        if remaining != 0 {
+            factor = factor.mul(factor);
+            if factor.cmp(bound) == Ordering::Greater {
+                return Option::None
+            }
+        }
+    }
+    Option::Some(result)
+}
+
+impl BigUint {
+    pub fn nth_root(self: BigUint, degree: u64) -> Result[BigUint, Error] {
+        let (root, _) = self.nth_root_rem(degree)?;
+        Result::Ok(root)
+    }
+
+    pub fn nth_root_rem(self: BigUint, degree: u64) -> Result[(BigUint, BigUint), Error] {
+        self.nth_root_rem_with_limits(degree, Limits::standard())
+    }
+
+    pub fn nth_root_rem_with_limits(self: BigUint, degree: u64, limits: Limits) -> Result[
+        (BigUint, BigUint),
+        Error,
+    ] {
+        limits.validate()?;
+        if degree == 0 {
+            return Result::Err(Error::InvalidRootDegree)
+        }
+        let _ = check_bits(self, limits)?;
+        if degree == 1 || self.is_zero() || self.is_one() {
+            return Result::Ok((self, BigUint::zero()))
+        }
+        if degree >= self.bits().to_u64() {
+            return Result::Ok((BigUint::one(), subtract(self, BigUint::one())))
+        }
+        if degree == 2 {
+            return self.sqrt_rem_with_limits(limits)
+        }
+        let bits = self.bits().to_u64();
+        let root_bits = (bits / degree
+            + if bits % degree == 0 {
+                0
+            } else {
+                1
+            }).to_isize();
+        let mut root = BigUint::one().shl_with_limits(root_bits, limits)?;
+        let divisor = BigUint::from_u64(degree);
+        let factor = BigUint::from_u64(degree - 1);
+        loop {
+            let quotient = match power_bounded(root, degree - 1, self) {
+                Some(power) => self.div(power)?,
+                None => BigUint::zero(),
+            };
+            let estimate = root.mul(factor).add(quotient).div(divisor)?;
+            if estimate.cmp(root) != Ordering::Less {
+                let power = power_bounded(root, degree, self).ok_or(Error::Underflow)?;
+                return Result::Ok((root, subtract(self, power)))
+            }
+            root = estimate;
+        }
+    }
+}

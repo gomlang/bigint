@@ -29,6 +29,19 @@ Both types provide `zero`, `one`, `from_u64`, `parse`, `parse_radix`, `to_radix`
 
 `BigUint::sqrt()` returns the floor square root. `sqrt_rem()` returns `(root, remainder)` with `n = root² + remainder` and `0 <= remainder < 2*root + 1`. `sqrt_rem_with_limits` checks the input magnitude against a caller-provided bit budget before Newton iteration; the ordinary methods use standard limits.
 
+`BigUint::nth_root(degree)` and `nth_root_rem(degree)` support every positive
+`u64` degree. They return the floor root `r` and optionally the remainder
+`n - r^degree`, with `r^degree <= n < (r+1)^degree`. Degree zero returns
+`InvalidRootDegree`; degree one returns the input and zero remainder.
+Zero and one are exact for every positive degree. Degrees at least the input
+bit count return one for nonzero inputs without allocating a huge power.
+`nth_root_rem_with_limits` checks the input bit budget before iteration; digit
+and exponent limits do not constrain root degree. Newton iteration uses bounded
+power comparisons, discarding a product as soon as it exceeds the input;
+multiplication scratch can use up to twice the input bit length. The ordinary
+methods use standard limits. These APIs are unsigned: signed negative inputs,
+including odd-degree signed roots, are not supported.
+
 Checked `to_i8/i16/i32/i64/isize` and `to_u8/u16/u32/u64/usize` conversions return `Option`, never truncate. Machine-width conversions use the current Linux amd64 target's 64-bit `isize` and `usize`.
 
 ### Arithmetic semantics
@@ -78,7 +91,7 @@ Deserialization uses standard limits and rejects noncanonical representations: e
 
 ## Complexity and limits
 
-With `n` and `m` limbs, addition/subtraction and bitwise operations are linear, multiplication is O(nm), and normalized division is O((n-m+1)m) for `n >= m`. Powers use repeated squaring. GCD uses Euclidean division. Text parsing uses multiply-add per digit; formatting divides by the largest radix power that fits a limb and emits grouped digits. General-radix conversion is quadratic in digit length. Square root uses Newton iteration over integer division. This implementation does not include Karatsuba/FFT multiplication, Montgomery reduction, higher integer roots, random-prime generation, rational arithmetic, floating-point conversions, or operator overloading. Rational and binary floating-point values live in `ecosystem::bigmath`.
+With `n` and `m` limbs, addition/subtraction and bitwise operations are linear, multiplication is O(nm), and normalized division is O((n-m+1)m) for `n >= m`. Powers use repeated squaring. GCD uses Euclidean division. Text parsing uses multiply-add per digit; formatting divides by the largest radix power that fits a limb and emits grouped digits. General-radix conversion is quadratic in digit length. Square root uses Newton iteration over integer division. This implementation does not include Karatsuba/FFT multiplication, Montgomery reduction, random-prime generation, rational arithmetic, floating-point conversions, or operator overloading. Rational and binary floating-point values live in `ecosystem::bigmath`.
 
 ## Verification
 
