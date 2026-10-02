@@ -1,0 +1,41 @@
+package tests;
+
+use ecosystem::bigint::{BigUint, Error, RootError, Limits};
+use std::testing;
+
+fn existing_error_name(error: Error) -> string {
+    match error {
+        Error::InvalidRadix(_) => "radix",
+        Error::Empty => "empty",
+        Error::InvalidDigit(_) => "digit",
+        Error::NegativeUnsigned => "unsigned",
+        Error::DivisionByZero => "division",
+        Error::Underflow => "underflow",
+        Error::NegativeShift => "shift",
+        Error::InvalidLimits => "limits",
+        Error::LimitExceeded(_) => "budget",
+        Error::InvalidEncoding => "encoding",
+    }
+}
+
+#[test]
+fn root_errors_preserve_existing_exhaustive_error_matches() -> () {
+    testing::assert_eq(
+        existing_error_name(testing::expect_err(BigUint::one().div(BigUint::zero()), "old error")),
+        "division",
+    );
+    testing::assert_eq(
+        testing::expect_err(BigUint::one().nth_root(0), "invalid degree"),
+        RootError::InvalidDegree,
+    );
+    testing::assert_eq(
+        testing::expect_err(
+            BigUint::one().nth_root_rem_with_limits(
+                3,
+                Limits { max_bits: 0, max_digits: 0, max_exponent: 0 },
+            ),
+            "root budget",
+        ),
+        RootError::Integer(Error::LimitExceeded("bits")),
+    );
+}

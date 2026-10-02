@@ -1,6 +1,6 @@
 package tests;
 
-use ecosystem::bigint::{BigUint, Limits, Error};
+use ecosystem::bigint::{BigUint, Limits, RootError};
 use std::testing;
 
 #[test]
@@ -48,7 +48,7 @@ fn roots_cover_large_perfect_powers_neighbors_and_resource_limits() -> () {
     }
     testing::assert_eq(
         testing::expect_err(BigUint::one().nth_root(0), "degree zero"),
-        Error::InvalidRootDegree,
+        RootError::InvalidDegree,
     );
     let huge: u64 = 18446744073709551615;
     testing::assert_eq(
