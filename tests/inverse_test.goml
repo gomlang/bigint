@@ -1,0 +1,73 @@
+package tests;
+
+use ecosystem::bigint::{BigInt, BigUint, Error, Limits};
+use std::testing;
+
+#[test]
+fn inverses_match_exhaustive_small_residue_search() -> () {
+    for modulus in 1..40 {
+        for input in -40..41 {
+            let mut expected: Option[u64] = Option::None;
+            for candidate in 0..modulus {
+                let residue = ((input * candidate) % modulus + modulus) % modulus;
+                if residue == 1 % modulus {
+                    expected = Option::Some(candidate.to_u64());
+                    break;
+                }
+            }
+            let actual = testing::expect_ok(
+                BigInt::from_i64(input.to_i64()).mod_inverse(BigUint::from_u64(modulus.to_u64())),
+                "inverse",
+            );
+            testing::assert((actual.map(|value| value.to_u64().unwrap_or(999))) == (expected));
+            if input >= 0 {
+                testing::assert(
+                    (testing::expect_ok(
+                        BigUint::from_u64(input.to_u64()).mod_inverse(
+                            BigUint::from_u64(modulus.to_u64()),
+                        ),
+                        "unsigned inverse",
+                    ))
+                        == (actual),
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn inverses_handle_multiple_limbs_and_input_budgets() -> () {
+    let modulus = testing::expect_ok(BigUint::one().shl(256), "modulus");
+    let inverse = testing::expect_ok(BigUint::from_u64(3).mod_inverse(modulus), "large inverse").unwrap_or(
+        BigUint::zero(),
+    );
+    testing::assert(
+        (testing::expect_ok(inverse.mul(BigUint::from_u64(3)).rem(modulus), "residue"))
+            == (BigUint::one()),
+    );
+    testing::assert(
+        (testing::expect_ok(BigInt::from_i64(-3).mod_inverse(modulus), "negative inverse").unwrap_or(
+            BigUint::zero(),
+        ).add(inverse))
+            == (modulus),
+    );
+    testing::assert(
+        (BigUint::one().mod_inverse(BigUint::zero())) == (Result::Err(Error::DivisionByZero)),
+    );
+    let limits = Limits { max_bits: 8, max_digits: 0, max_exponent: 0 };
+    testing::assert(BigUint::one().mod_inverse_with_limits(modulus, limits).is_err());
+    testing::assert(modulus.mod_inverse_with_limits(BigUint::one(), limits).is_err());
+    testing::assert(
+        BigUint::one().mod_inverse_with_limits(
+            BigUint::one(),
+            Limits { max_bits: -1, max_digits: 0, max_exponent: 0 },
+        ).is_err(),
+    );
+    testing::assert(
+        (testing::expect_ok(
+            BigUint::zero().mod_inverse_with_limits(BigUint::from_u64(7), limits),
+            "zero",
+        ))
+            == (Option::None),
+    );
+}
