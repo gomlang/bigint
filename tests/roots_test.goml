@@ -1,0 +1,67 @@
+package tests;
+
+use ecosystem::bigint::{BigUint, Limits, Error};
+use std::testing;
+
+#[test]
+fn integer_roots_match_small_exhaustive_powers() -> () {
+    for degree in 1..10 {
+        for input in 0..300 {
+            let mut expected: u64 = 0;
+            loop {
+                let candidate = expected + 1;
+                let mut power: u64 = 1;
+                for _ in 0..degree {
+                    power *= candidate;
+                }
+                if power > input.to_u64() {
+                    break;
+                }
+                expected = candidate;
+            }
+            let value = BigUint::from_u64(input.to_u64());
+            let (root, remainder) = testing::expect_ok(value.nth_root_rem(degree.to_u64()), "root");
+            testing::assert(root.to_u64() == Option::Some(expected));
+            let power = testing::expect_ok(root.pow(degree.to_u64()), "power");
+            testing::assert_eq(power.add(remainder), value);
+        }
+    }
+}
+
+#[test]
+fn roots_cover_large_perfect_powers_neighbors_and_resource_limits() -> () {
+    let root = testing::expect_ok(BigUint::one().shl(1000), "root").add(BigUint::from_u64(17));
+    for degree in[3.to_u64(), 5, 7, 31] {
+        let power = testing::expect_ok(root.pow(degree), "large perfect power");
+        let (actual, remainder) = testing::expect_ok(power.nth_root_rem(degree), "exact root");
+        testing::assert_eq(actual, root);
+        testing::assert(remainder.is_zero());
+        let below = testing::expect_ok(power.sub(BigUint::one()), "below");
+        testing::assert_eq(
+            testing::expect_ok(below.nth_root(degree), "below root"),
+            testing::expect_ok(root.sub(BigUint::one()), "previous"),
+        );
+        testing::assert_eq(
+            testing::expect_ok(power.add(BigUint::one()).nth_root(degree), "above root"),
+            root,
+        );
+    }
+    testing::assert_eq(
+        testing::expect_err(BigUint::one().nth_root(0), "degree zero"),
+        Error::InvalidRootDegree,
+    );
+    let huge: u64 = 18446744073709551615;
+    testing::assert_eq(
+        testing::expect_ok(BigUint::from_u64(99).nth_root(huge), "huge degree"),
+        BigUint::one(),
+    );
+    let zero = Limits { max_bits: 0, max_digits: 0, max_exponent: 0 };
+    testing::assert_eq(
+        testing::expect_ok(BigUint::zero().nth_root_rem_with_limits(huge, zero), "zero").0,
+        BigUint::zero(),
+    );
+    testing::assert(BigUint::one().nth_root_rem_with_limits(huge, zero).is_err());
+    testing::assert(
+        BigUint::one().nth_root_rem_with_limits(1, Limits { max_bits: -1, ..zero }).is_err(),
+    );
+}

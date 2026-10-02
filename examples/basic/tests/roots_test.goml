@@ -1,0 +1,12 @@
+package tests;
+
+use ecosystem::bigint::{BigUint};
+use std::testing;
+
+#[test]
+fn downstream_integer_cube_root_preserves_exact_remainder() -> () {
+    let value = testing::expect_ok(BigUint::parse("1000000000000000000000000000001"), "integer");
+    let (root, remainder) = testing::expect_ok(value.nth_root_rem(3), "cube root");
+    testing::assert_eq(root.to_string(), "10000000000");
+    testing::assert_eq(remainder, BigUint::one());
+}
