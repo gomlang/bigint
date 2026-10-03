@@ -39,11 +39,23 @@ bit count return one for nonzero inputs without allocating a huge power.
 and exponent limits do not constrain root degree. Newton iteration uses bounded
 power comparisons, discarding a product as soon as it exceeds the input;
 multiplication scratch can use up to twice the input bit length. The ordinary
-methods use standard limits. These APIs are unsigned: signed negative inputs,
-including odd-degree signed roots, are not supported. Root APIs return the
-separate `RootError` enum; `RootError::Integer(Error)` preserves underlying
+methods use standard limits. Unsigned root APIs return the separate `RootError` enum; `RootError::Integer(Error)` preserves underlying
 limit/arithmetic failures. The existing `Error` enum is unchanged, so older
 exhaustive matches remain valid.
+
+`BigInt::nth_root`, `nth_root_rem`, and `nth_root_rem_with_limits` provide
+signed roots with the same input budgets and bounded algorithm. Positive inputs
+accept any positive degree; negative inputs require an odd degree. Roots truncate
+toward zero, so `(-9).nth_root_rem(3)` returns `(-2, -1)`. In every successful
+result, `n = root^degree + remainder`; a nonzero remainder has the input's sign,
+and `abs(root)^degree <= abs(n) < (abs(root)+1)^degree`. Zero results never carry
+a negative sign. Degree one returns `(n, 0)`, including negative inputs.
+
+Signed APIs use `SignedRootError::{InvalidDegree, NegativeEvenRoot, Integer(Error)}`.
+Invalid limits are checked first, then degree zero, then a negative even-degree
+input, and finally the magnitude budget. The existing `RootError` and `Error`
+enums remain unchanged for callers using exhaustive matches. Huge odd degrees
+use the unsigned shortcut and do not allocate a correspondingly huge power.
 
 Checked `to_i8/i16/i32/i64/isize` and `to_u8/u16/u32/u64/usize` conversions return `Option`, never truncate. Machine-width conversions use the current Linux amd64 target's 64-bit `isize` and `usize`.
 

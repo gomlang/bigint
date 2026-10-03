@@ -1,0 +1,24 @@
+package tests;
+
+use ecosystem::bigint::{BigInt, RootError, SignedRootError};
+use std::testing;
+
+fn root_error_name(error: RootError) -> string {
+    match error {
+        RootError::InvalidDegree => "degree",
+        RootError::Integer(_) => "integer",
+    }
+}
+
+#[test]
+fn consumer_extracts_signed_integer_roots_without_breaking_old_error_matches() -> () {
+    let value = testing::expect_ok(BigInt::parse("-1000000000000000000000000001"), "value");
+    let (root, remainder) = testing::expect_ok(value.nth_root_rem(3), "cube root");
+    testing::assert_eq(root.to_string(), "-1000000000");
+    testing::assert_eq(remainder.to_string(), "-1");
+    testing::assert_eq(
+        testing::expect_err(value.nth_root(2), "negative square root"),
+        SignedRootError::NegativeEvenRoot,
+    );
+    testing::assert_eq(root_error_name(RootError::InvalidDegree), "degree");
+}

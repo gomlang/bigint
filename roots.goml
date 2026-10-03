@@ -15,6 +15,56 @@ impl ToString for RootError {
     }
 }
 
+#[derive(PartialEq, Eq, Debug)]
+pub enum SignedRootError {
+    InvalidDegree,
+    NegativeEvenRoot,
+    Integer(Error),
+}
+
+impl ToString for SignedRootError {
+    fn to_string(self: SignedRootError) -> string {
+        match self {
+            SignedRootError::InvalidDegree => "integer root degree must be positive",
+            SignedRootError::NegativeEvenRoot => "negative integers have no real even-degree root",
+            SignedRootError::Integer(error) => error.to_string(),
+        }
+    }
+}
+
+impl BigInt {
+    pub fn nth_root(self: BigInt, degree: u64) -> Result[BigInt, SignedRootError] {
+        let (root, _) = self.nth_root_rem(degree)?;
+        Result::Ok(root)
+    }
+
+    pub fn nth_root_rem(self: BigInt, degree: u64) -> Result[(BigInt, BigInt), SignedRootError] {
+        self.nth_root_rem_with_limits(degree, Limits::standard())
+    }
+
+    pub fn nth_root_rem_with_limits(self: BigInt, degree: u64, limits: Limits) -> Result[
+        (BigInt, BigInt),
+        SignedRootError,
+    ] {
+        limits.validate().map_err(|error| SignedRootError::Integer(error))?;
+        if degree == 0 {
+            return Result::Err(SignedRootError::InvalidDegree)
+        }
+        if self.is_negative() && degree % 2 == 0 {
+            return Result::Err(SignedRootError::NegativeEvenRoot)
+        }
+        let (root, remainder) = integer_root(self.abs(), degree, limits).map_err(
+            |error| SignedRootError::Integer(error),
+        )?;
+        Result::Ok(
+            (
+                BigInt::from_sign_magnitude(self.is_negative(), root),
+                BigInt::from_sign_magnitude(self.is_negative(), remainder),
+            ),
+        )
+    }
+}
+
 fn power_bounded(value: BigUint, exponent: u64, bound: BigUint) -> Option[BigUint] {
     let mut result = BigUint::one();
     let mut factor = value;

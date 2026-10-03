@@ -1,0 +1,100 @@
+package tests;
+
+use ecosystem::bigint::{BigInt, BigUint, Error, Limits, SignedRootError};
+use std::testing;
+
+#[test]
+fn signed_roots_match_small_integer_powers_and_signed_remainders() -> () {
+    for degree in 1..8 {
+        for input in -100..101 {
+            let value = BigInt::from_i64(input.to_i64());
+            if input < 0 && degree % 2 == 0 {
+                testing::assert_eq(
+                    testing::expect_err(value.nth_root(degree.to_u64()), "negative even root"),
+                    SignedRootError::NegativeEvenRoot,
+                );
+                continue
+            }
+            let magnitude = if input < 0 {
+                -input
+            } else {
+                input
+            };
+            let mut expected: isize = 0;
+            loop {
+                let mut power: isize = 1;
+                for _ in 0..degree {
+                    power *= expected + 1;
+                }
+                if power > magnitude {
+                    break;
+                }
+                expected += 1;
+            }
+            if input < 0 {
+                expected = -expected;
+            }
+            let (root, remainder) = testing::expect_ok(value.nth_root_rem(degree.to_u64()), "root");
+            testing::assert(root.to_i64() == Option::Some(expected.to_i64()));
+            let power = testing::expect_ok(root.pow(degree.to_u64()), "power");
+            testing::assert_eq(power.add(remainder), value);
+            testing::assert(remainder.is_zero() || remainder.signum() == value.signum());
+        }
+    }
+}
+
+#[test]
+fn signed_roots_cover_large_negative_neighbors_and_huge_degrees() -> () {
+    let root = testing::expect_ok(BigInt::one().shl(500), "large root").add(BigInt::from_u64(7));
+    let power = testing::expect_ok(root.pow(5), "large power");
+    let (actual, remainder) = testing::expect_ok(power.neg().nth_root_rem(5), "exact negative");
+    testing::assert_eq(actual, root.neg());
+    testing::assert(remainder.is_zero());
+    testing::assert_eq(
+        testing::expect_ok(power.add(BigInt::one()).neg().nth_root(5), "below negative power"),
+        root.neg(),
+    );
+    testing::assert_eq(
+        testing::expect_ok(power.sub(BigInt::one()).neg().nth_root(5), "above negative power"),
+        root.sub(BigInt::one()).neg(),
+    );
+    let huge: u64 = 18446744073709551615;
+    let (root, remainder) = testing::expect_ok(BigInt::from_i64(-99).nth_root_rem(huge), "huge");
+    testing::assert_eq(root, BigInt::from_i64(-1));
+    testing::assert_eq(remainder, BigInt::from_i64(-98));
+    testing::assert_eq(
+        testing::expect_ok(BigInt::from_sign_magnitude(true, BigUint::zero()).nth_root(2), "zero"),
+        BigInt::zero(),
+    );
+}
+
+#[test]
+fn signed_root_errors_preserve_validation_order_and_zero_budgets() -> () {
+    let zero = Limits { max_bits: 0, max_digits: 0, max_exponent: 0 };
+    testing::assert_eq(
+        testing::expect_err(BigInt::from_i64(-2).nth_root(0), "zero degree"),
+        SignedRootError::InvalidDegree,
+    );
+    testing::assert_eq(
+        testing::expect_err(
+            BigInt::from_i64(-2).nth_root_rem_with_limits(0, Limits { max_bits: -1, ..zero }),
+            "invalid limits first",
+        ),
+        SignedRootError::Integer(Error::InvalidLimits),
+    );
+    testing::assert_eq(
+        testing::expect_err(BigInt::from_i64(-2).nth_root_rem_with_limits(2, zero), "even first"),
+        SignedRootError::NegativeEvenRoot,
+    );
+    for value in[BigInt::one(), BigInt::from_i64(-1)] {
+        testing::assert_eq(
+            testing::expect_err(value.nth_root_rem_with_limits(1, zero), "budget"),
+            SignedRootError::Integer(Error::LimitExceeded("bits")),
+        );
+    }
+    let (root, remainder) = testing::expect_ok(
+        BigInt::zero().nth_root_rem_with_limits(2, zero),
+        "zero budget",
+    );
+    testing::assert(root.is_zero() && remainder.is_zero());
+}
