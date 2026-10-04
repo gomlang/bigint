@@ -37,7 +37,9 @@ Zero and one are exact for every positive degree. Degrees at least the input
 bit count return one for nonzero inputs without allocating a huge power.
 `nth_root_rem_with_limits` checks the input bit budget before iteration; digit
 and exponent limits do not constrain root degree. Newton iteration uses bounded
-power comparisons, discarding a product as soon as it exceeds the input;
+power comparisons, discarding a product as soon as it exceeds the input.
+For high degrees, a zero Newton quotient triggers interval bisection until
+the estimate is close enough for Newton iteration to converge quickly;
 multiplication scratch can use up to twice the input bit length. The ordinary
 methods use standard limits. Unsigned root APIs return the separate `RootError` enum; `RootError::Integer(Error)` preserves underlying
 limit/arithmetic failures. The existing `Error` enum is unchanged, so older

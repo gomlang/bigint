@@ -1,0 +1,16 @@
+package tests;
+
+use ecosystem::bigint::{BigUint};
+use std::testing;
+
+#[test]
+fn downstream_high_degree_root_preserves_neighbor_remainder() -> () {
+    let root = BigUint::from_u64(32769);
+    let power = testing::expect_ok(root.pow(257), "power");
+    let (actual, remainder) = testing::expect_ok(
+        power.add(BigUint::one()).nth_root_rem(257),
+        "root",
+    );
+    testing::assert_eq(actual, root);
+    testing::assert_eq(remainder, BigUint::one());
+}

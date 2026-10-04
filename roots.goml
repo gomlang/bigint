@@ -87,6 +87,31 @@ fn power_bounded(value: BigUint, exponent: u64, bound: BigUint) -> Option[BigUin
     Option::Some(result)
 }
 
+fn narrow_root(value: BigUint, degree: u64, upper: BigUint) -> Result[(BigUint, BigUint), Error] {
+    // This is entered at the initial power-of-two upper bound: a positive
+    // Newton quotient stays positive as the estimates decrease. Its half is
+    // a lower bound, and each power comparison halves the remaining interval.
+    let mut root = upper;
+    let mut lower = root.shr(1)?;
+    loop {
+        let middle = root.add(lower).shr(1)?;
+        match power_bounded(middle, degree, value) {
+            Some(_) => {
+                lower = middle;
+                if root == middle.add(BigUint::one()) {
+                    root = middle;
+                }
+            },
+            None => {
+                root = middle;
+            },
+        }
+        if let Some(power) = power_bounded(root, degree - 1, value) {
+            return Result::Ok((root, value.div(power)?))
+        }
+    }
+}
+
 impl BigUint {
     pub fn nth_root(self: BigUint, degree: u64) -> Result[BigUint, RootError] {
         let (root, _) = self.nth_root_rem(degree)?;
@@ -133,7 +158,18 @@ fn integer_root(value: BigUint, degree: u64, limits: Limits) -> Result[(BigUint,
     loop {
         let quotient = match power_bounded(root, degree - 1, value) {
             Some(power) => value.div(power)?,
-            None => BigUint::zero(),
+            None => {
+                // When the degree is large, a zero Newton quotient can lower
+                // the upper bound only slightly. Narrow its proven bracket
+                // before resuming Newton iteration.
+                if root_bits > 2 && degree > root_bits.to_u64() {
+                    let (upper, quotient) = narrow_root(value, degree, root)?;
+                    root = upper;
+                    quotient
+                } else {
+                    BigUint::zero()
+                }
+            },
         };
         let estimate = root.mul(factor).add(quotient).div(divisor)?;
         if estimate.cmp(root) != Ordering::Less {

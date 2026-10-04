@@ -1,0 +1,54 @@
+package tests;
+
+use ecosystem::bigint::{BigInt, BigUint};
+use std::testing;
+
+#[test]
+fn high_degree_roots_preserve_perfect_power_boundaries() -> () {
+    for (base, degree) in Vec::from_array(
+        [
+            (2.to_u64(), 1023.to_u64()),
+            (5, 127),
+            (17, 31),
+            (32769, 257),
+            (32769, 1023),
+            (50000, 257),
+            (65535, 257),
+        ],
+    ) {
+        let expected = BigUint::from_u64(base);
+        let power = testing::expect_ok(expected.pow(degree), "perfect power");
+        let previous = testing::expect_ok(expected.sub(BigUint::one()), "previous root");
+        for delta in -1..2 {
+            let value = if delta < 0 {
+                testing::expect_ok(power.sub(BigUint::one()), "below perfect power")
+            } else if delta > 0 {
+                power.add(BigUint::one())
+            } else {
+                power
+            };
+            let root_expected = if delta < 0 {
+                previous
+            } else {
+                expected
+            };
+            let root_power = testing::expect_ok(root_expected.pow(degree), "root power");
+            let remainder_expected = testing::expect_ok(value.sub(root_power), "remainder");
+            let (root, remainder) = testing::expect_ok(value.nth_root_rem(degree), "root");
+            testing::assert_eq(root, root_expected);
+            testing::assert_eq(remainder, remainder_expected);
+        }
+    }
+}
+
+#[test]
+fn high_degree_negative_roots_keep_signed_remainders() -> () {
+    let root = BigInt::from_u64(32769);
+    let power = testing::expect_ok(root.pow(257), "power");
+    let (actual, remainder) = testing::expect_ok(
+        power.add(BigInt::one()).neg().nth_root_rem(257),
+        "negative root",
+    );
+    testing::assert_eq(actual, root.neg());
+    testing::assert_eq(remainder, BigInt::from_i64(-1));
+}
