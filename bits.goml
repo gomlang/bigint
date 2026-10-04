@@ -193,7 +193,13 @@ impl BigInt {
         if index < 0 {
             false
         } else if self.negative {
-            !subtract(self.magnitude, BigUint::one()).bit(index)
+            // Negation preserves the lowest set bit and complements all higher
+            // bits, without allocating the magnitude-minus-one intermediate.
+            if index > self.magnitude.trailing_zeros().unwrap_or(0) {
+                !self.magnitude.bit(index)
+            } else {
+                self.magnitude.bit(index)
+            }
         } else {
             self.magnitude.bit(index)
         }

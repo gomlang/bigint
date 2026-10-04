@@ -65,7 +65,7 @@ Checked `to_i8/i16/i32/i64/isize` and `to_u8/u16/u32/u64/usize` conversions retu
 - `div_rem_euclid` returns `0 <= r < abs(b)`, including negative divisors. `div` and `rem` use truncating semantics.
 - Zero divisors return `Error::DivisionByZero`. `gcd(0, 0)` and any `lcm` with a zero argument return zero.
 - `pow` takes a `u64` exponent, with `0^0 = 1`. `modpow` takes a `BigUint` exponent and positive `BigUint` modulus; signed bases produce a nonnegative residue. Modulus one produces zero, including a zero exponent.
-- Signed bitwise operations act on infinite two's-complement representations. `bitnot(x) = -x - 1`; right shift rounds negative values toward negative infinity. `bits()` measures the magnitude. Negative bit indexes return false. `trailing_zeros(0)` returns `None`.
+- Signed bitwise operations act on infinite two's-complement representations. `bitnot(x) = -x - 1`; right shift rounds negative values toward negative infinity. `bits()` measures the magnitude. Negative bit indexes return false. `trailing_zeros(0)` returns `None`. Negative `bit` queries scan the magnitude's trailing zero limbs without allocating a temporary integer; queries on odd magnitudes take constant work.
 - Shift counts are signed machine integers; negative counts return `Error::NegativeShift`. Large right shifts allocate no huge intermediate value and return zero or negative one as appropriate.
 
 `mod_inverse(modulus) -> Result[Option[BigUint], Error]` is available on both

@@ -1,0 +1,37 @@
+package tests;
+
+use ecosystem::bigint::{BigInt, BigUint};
+use std::testing;
+
+#[test]
+fn signed_bit_queries_match_native_sign_extension() -> () {
+    for native in -129..130 {
+        let value = BigInt::from_i64(native.to_i64());
+        testing::assert(!value.bit(-1));
+        for index in 0..64 {
+            testing::assert_eq(value.bit(index), ((native.to_i64() >> index) & 1) != 0);
+        }
+        testing::assert_eq(value.bit(64), native < 0);
+        testing::assert_eq(value.bit(9223372036854775807), native < 0);
+    }
+}
+
+#[test]
+fn negative_bit_queries_respect_long_borrows_without_mutating_magnitude() -> () {
+    for exponent in Vec::from_array([31, 32, 63, 64, 4096, 65535]) {
+        let power = testing::expect_ok(BigUint::one().shl(exponent), "power of two");
+        let magnitude = power.add(BigUint::from_u64(5));
+        let negative_power = BigInt::from_sign_magnitude(true, power);
+        let negative_mixed = BigInt::from_sign_magnitude(true, magnitude);
+        for index in Vec::from_array(
+            [0, 1, 2, 3, 30, 31, 32, 33, exponent - 1, exponent, exponent + 1, 65536],
+        ) {
+            // -2^k has zeroes below bit k and infinite ones above it.
+            testing::assert_eq(negative_power.bit(index), index >= exponent);
+            // -(2^k + 5) = ~(2^k + 4): only bits k and 2 are zero.
+            testing::assert_eq(negative_mixed.bit(index), index != exponent && index != 2);
+        }
+        testing::assert_eq(negative_power.abs(), power);
+        testing::assert_eq(negative_mixed.abs(), magnitude);
+    }
+}
