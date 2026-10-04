@@ -36,6 +36,16 @@ fn div_small(value: BigUint, divisor: u32) -> (BigUint, u32) {
     return (normalized(output), remainder.to_u32())
 }
 
+fn rem_small(value: BigUint, divisor: u32) -> u32 {
+    let mut remainder: u64 = 0;
+    let mut index = value.limbs.len();
+    while index > 0 {
+        index -= 1;
+        remainder = ((remainder << 32) | value.limbs.get(index).to_u64()) % divisor.to_u64();
+    }
+    remainder.to_u32()
+}
+
 fn shift_limbs_left(value: BigUint, shift: isize) -> Vec[u32] {
     let output = Vec::with_capacity(value.limbs.len() + 1);
     let mut carry: u64 = 0;
@@ -195,8 +205,16 @@ impl BigUint {
     }
 
     pub fn rem(self: BigUint, divisor: BigUint) -> Result[BigUint, Error] {
-        let (_, remainder) = self.div_rem(divisor)?;
-        Result::Ok(remainder)
+        if divisor.is_zero() {
+            return Result::Err(Error::DivisionByZero)
+        }
+        if self.cmp(divisor) == Ordering::Less {
+            return Result::Ok(self)
+        }
+        if divisor.limbs.len() == 1 {
+            return Result::Ok(BigUint::from_u64(rem_small(self, divisor.limbs.get(0)).to_u64()))
+        }
+        Result::Ok(divide_multi(self, divisor).1)
     }
 
     pub fn pow(self: BigUint, exponent: u64) -> Result[BigUint, Error] {
@@ -237,13 +255,12 @@ impl BigUint {
         let mut left = self;
         let mut right = other;
         while !right.is_zero() {
-            let (_, remainder) = if right.limbs.len() == 1 {
-                let result = div_small(left, right.limbs.get(0));
-                (result.0, BigUint::from_u64(result.1.to_u64()))
+            let remainder = if right.limbs.len() == 1 {
+                BigUint::from_u64(rem_small(left, right.limbs.get(0)).to_u64())
             } else if left.cmp(right) == Ordering::Less {
-                (BigUint::zero(), left)
+                left
             } else {
-                divide_multi(left, right)
+                divide_multi(left, right).1
             };
             left = right;
             right = remainder;
@@ -384,8 +401,9 @@ impl BigInt {
     }
 
     pub fn rem(self: BigInt, divisor: BigInt) -> Result[BigInt, Error] {
-        let (_, remainder) = self.div_rem(divisor)?;
-        Result::Ok(remainder)
+        Result::Ok(
+            BigInt::from_sign_magnitude(self.negative, self.magnitude.rem(divisor.magnitude)?),
+        )
     }
 
     pub fn pow(self: BigInt, exponent: u64) -> Result[BigInt, Error] {

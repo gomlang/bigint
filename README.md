@@ -8,7 +8,7 @@ The API takes inspiration from [num-bigint](https://docs.rs/num-bigint/latest/nu
 
 `BigUint` stores normalized little-endian base-2^32 limbs in a private `FrozenVec[u32]`. Zero has no limbs. `BigInt` combines a magnitude with a sign; negative zero is normalized to zero. Assignment and `abs()` share immutable storage. Arithmetic returns new values. Byte and limb imports copy input data; exports return detached mutable vectors. Values can be shared across concurrent tasks and used as hash-map keys.
 
-Addition and subtraction propagate carries and borrows. Multiplication uses schoolbook limb multiplication with exact `u64` intermediates. Division has a single-limb fast path and normalized multi-limb long division with quotient estimation, correction, and add-back. There is no conversion to strings or floating point inside arithmetic.
+Addition and subtraction propagate carries and borrows. Multiplication uses schoolbook limb multiplication with exact `u64` intermediates. Division has a single-limb fast path and normalized multi-limb long division with quotient estimation, correction, and add-back. Remainder-only operations and GCD steps with a single-limb divisor accumulate the remainder without allocating unused quotient limbs. There is no conversion to strings or floating point inside arithmetic.
 
 ## Core API
 

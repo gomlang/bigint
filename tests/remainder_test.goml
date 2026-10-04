@@ -1,0 +1,58 @@
+package tests;
+
+use ecosystem::bigint::{BigInt, BigUint, Error};
+use std::testing;
+
+#[test]
+fn single_limb_remainders_preserve_boundaries_signs_and_operands() -> () {
+    let quotient = testing::expect_ok(BigUint::one().shl(192), "high quotient").add(
+        BigUint::from_u64(4294967295),
+    );
+    let divisors: Vec[u64] = Vec::from_array([1, 2, 3, 97, 65537, 2147483648, 4294967295]);
+    for word in divisors {
+        let divisor = BigUint::from_u64(word);
+        let remainder = BigUint::from_u64(word - 1);
+        let multiple = quotient.mul(divisor);
+        let dividend = multiple.add(remainder);
+        let original = dividend.to_limbs_le();
+        testing::assert_eq(testing::expect_ok(dividend.rem(divisor), "remainder"), remainder);
+        testing::assert_eq(dividend.gcd(divisor), BigUint::one());
+        let (q, r) = testing::expect_ok(dividend.div_rem(divisor), "quotient and remainder");
+        testing::assert_eq(q, quotient);
+        testing::assert_eq(r, remainder);
+        testing::assert_eq(
+            testing::expect_ok(multiple.rem(divisor), "exact multiple"),
+            BigUint::zero(),
+        );
+        testing::assert_eq(multiple.gcd(divisor), divisor);
+        testing::assert_eq(testing::expect_ok(remainder.rem(divisor), "smaller input"), remainder);
+        testing::assert_eq(testing::expect_ok(divisor.rem(divisor), "equal input"), BigUint::zero());
+        testing::assert_eq(
+            testing::expect_ok(BigUint::zero().rem(divisor), "zero input"),
+            BigUint::zero(),
+        );
+        for negative_left in Vec::from_array([false, true]) {
+            for negative_right in Vec::from_array([false, true]) {
+                let left = BigInt::from_sign_magnitude(negative_left, dividend);
+                let right = BigInt::from_sign_magnitude(negative_right, divisor);
+                testing::assert_eq(
+                    testing::expect_ok(left.rem(right), "signed remainder"),
+                    BigInt::from_sign_magnitude(negative_left, remainder),
+                );
+            }
+        }
+        let after = dividend.to_limbs_le();
+        testing::assert_eq(after.len(), original.len());
+        for index in 0..original.len() {
+            testing::assert_eq(after.get(index), original.get(index));
+        }
+    }
+    testing::assert_eq(
+        testing::expect_err(BigUint::zero().rem(BigUint::zero()), "unsigned zero divisor"),
+        Error::DivisionByZero,
+    );
+    testing::assert_eq(
+        testing::expect_err(BigInt::from_i64(-1).rem(BigInt::zero()), "signed zero divisor"),
+        Error::DivisionByZero,
+    );
+}
