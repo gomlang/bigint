@@ -2,4 +2,4 @@
 path = "ecosystem::bigint"
 
 [dev-dependencies]
-"ecosystem::verification" = "0.1.0"
+"ecosystem::verification" = true
