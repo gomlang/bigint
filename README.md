@@ -115,19 +115,19 @@ With `n` and `m` limbs, addition/subtraction and bitwise operations are linear, 
 From the repository root:
 
 ```sh
-(cd ../verification && just ecosystem-test bigint)
+(cd ../workflows && just ecosystem-test bigint)
 ```
 
 Black-box tests cover signed division identities, quotient-correction boundaries, carry chains, fixed-width conversion extremes, all radices, canonical Serde, resource limits, detached storage, and shared concurrent arithmetic. The example has its own tests. The example’s native GoML tests check 1,938 frozen independent reference vectors covering multi-limb arithmetic, signed bitwise operations and shifts, both division conventions, radices, signed bytes, powers, GCD/LCM, and modular powers. [Vector provenance](examples/basic/tests/data/README.md) records the independent arbitrary-precision reference and seed. The native ecosystem verifier also runs the concurrent immutable arithmetic tests under Go’s race detector. Python is not required.
 
 ## Development and examples
 
-Requires the [current GoML toolchain](https://github.com/gomlang/verification/blob/main/ci/toolchain.json) with unversioned registry support. The `examples/basic/` example shares the root manifest; test-only helpers are declared in `[dev-dependencies]`. From the library root, run:
+Requires the [current GoML toolchain](https://github.com/gomlang/workflows/blob/main/ci/toolchain.json) with unversioned registry support. The `examples/basic/` example shares the root manifest; test-only helpers are declared in `[dev-dependencies]`. From the library root, run:
 
 ```sh
 goml run --example basic
 goml test
-(cd ../verification && just ecosystem-test bigint)
+(cd ../workflows && just ecosystem-test bigint)
 ```
 
-`goml test` builds the example and runs its tests. `(cd ../verification && just ecosystem-test bigint)` runs the library-specific smoke and compatibility checks.
+`goml test` builds the example and runs its tests. `(cd ../workflows && just ecosystem-test bigint)` runs the library-specific smoke and compatibility checks.

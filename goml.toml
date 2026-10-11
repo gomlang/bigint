@@ -2,4 +2,4 @@
 path = "ecosystem::bigint"
 
 [dev-dependencies]
-"ecosystem::verification" = true
+"ecosystem::testkit" = true
