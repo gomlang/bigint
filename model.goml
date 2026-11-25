@@ -178,6 +178,10 @@ impl BigUint {
     }
 
     pub fn cmp(self: BigUint, other: BigUint) -> Ordering {
+        self.compare_value(other)
+    }
+
+    fn compare_value(self: BigUint, other: BigUint) -> Ordering {
         if self.limbs.len() < other.limbs.len() {
             return Ordering::Less
         }
@@ -307,6 +311,10 @@ impl BigInt {
     }
 
     pub fn cmp(self: BigInt, other: BigInt) -> Ordering {
+        self.compare_value(other)
+    }
+
+    fn compare_value(self: BigInt, other: BigInt) -> Ordering {
         if self.negative != other.negative {
             if self.negative {
                 Ordering::Less

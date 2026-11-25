@@ -18,7 +18,7 @@ impl PartialOrd for BigUint {
 
 impl Ord for BigUint {
     fn cmp(self: BigUint, other: BigUint) -> Ordering {
-        BigUint::cmp(self, other)
+        self.compare_value(other)
     }
 }
 
@@ -60,7 +60,7 @@ impl PartialOrd for BigInt {
 
 impl Ord for BigInt {
     fn cmp(self: BigInt, other: BigInt) -> Ordering {
-        BigInt::cmp(self, other)
+        self.compare_value(other)
     }
 }
 
